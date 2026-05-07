@@ -915,6 +915,46 @@ app.post('/api/change-username', async (req, res) => {
   }
 });
 
+// 数据库修复API
+app.post('/api/fix-db', async (req, res) => {
+  if (!DATABASE_URL) {
+    return res.json({ success: true, message: 'Not using PostgreSQL' });
+  }
+  
+  try {
+    console.log('Fixing database schema...');
+    
+    // 添加 nickname 列
+    try {
+      await usersDB.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS nickname TEXT DEFAULT \'\'');
+      console.log('Fixed nickname column');
+    } catch (e) {
+      console.log('Nickname column fix error:', e.message);
+    }
+    
+    // 添加 avatar 列
+    try {
+      await usersDB.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT');
+      console.log('Fixed avatar column');
+    } catch (e) {
+      console.log('Avatar column fix error:', e.message);
+    }
+    
+    // 添加 type 列到 messages
+    try {
+      await messagesDB.query('ALTER TABLE messages ADD COLUMN IF NOT EXISTS type TEXT DEFAULT \'text\'');
+      console.log('Fixed type column in messages');
+    } catch (e) {
+      console.log('Type column fix error:', e.message);
+    }
+    
+    res.json({ success: true, message: 'Database schema fixed successfully' });
+  } catch (error) {
+    console.error('Database fix error:', error);
+    res.status(500).json({ success: false, message: 'Database fix failed: ' + error.message });
+  }
+});
+
 // 上传图片API
 app.post('/api/upload-image', upload.single('image'), async (req, res) => {
   try {
