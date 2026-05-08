@@ -976,7 +976,7 @@ app.post('/api/group/create', async (req, res) => {
         [groupId, userId, 'owner']
       );
 
-      res.json({ success: true, group: { id: groupId, group_number: groupNumber, name: groupName, owner_id: userId } });
+      res.json({ success: true, group: { id: groupId, group_number: groupNumber, name: groupName, owner_id: userId, avatar: null } });
     } else {
       const existingGroup = await promisifyDB(groupsDB.find).call(groupsDB, { group_number: groupNumber });
       if (existingGroup.length > 0) {
@@ -1000,7 +1000,7 @@ app.post('/api/group/create', async (req, res) => {
         joined_at: new Date().toISOString()
       });
 
-      res.json({ success: true, group: { id: groupId, group_number: groupNumber, name: groupName, owner_id: userId } });
+      res.json({ success: true, group: { id: groupId, group_number: groupNumber, name: groupName, owner_id: userId, avatar: null } });
     }
   } catch (error) {
     console.error('Create group error:', error);

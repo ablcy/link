@@ -82,11 +82,10 @@ class ChatApp {
     }
 
     async createGroup() {
-        const groupName = document.getElementById('group-name-input').value.trim();
         const groupNumber = document.getElementById('group-number-input').value.trim();
 
-        if (!groupName || !groupNumber) {
-            alert('请填写群名称和群号');
+        if (!groupNumber) {
+            alert('请填写群号');
             return;
         }
 
@@ -95,7 +94,7 @@ class ChatApp {
             method: 'POST',
             body: JSON.stringify({
                 userId: this.currentUser.id,
-                groupName,
+                groupName: groupNumber,
                 groupNumber
             })
         });
@@ -885,12 +884,22 @@ class ChatApp {
             const lastMessage = groupMsgs[groupMsgs.length - 1];
             const unreadCount = 0;
 
+            // 群聊头像内容
+            let groupAvatarContent = '';
+            if (group.avatar && group.avatar.trim() !== '') {
+                groupAvatarContent = `<div style="width: 100%; height: 100%; border-radius: 50%; overflow: hidden;">
+                    <img src="${group.avatar}" alt="" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>`;
+            } else {
+                groupAvatarContent = `<div style="width: 100%; height: 100%; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); color: white; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 500;">
+                    G
+                </div>`;
+            }
+
             return `
                 <div class="chat-item group-item" data-group-id="${group.id}" onclick="app.openGroupChat('${group.id}')">
                     <div class="avatar">
-                        <div style="width: 100%; height: 100%; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); color: white; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 500;">
-                            G
-                        </div>
+                        ${groupAvatarContent}
                     </div>
                     <div class="chat-info">
                         <div class="chat-name">${group.name} ${group.role === 'owner' ? '(群主)' : ''}</div>
@@ -1610,7 +1619,7 @@ class ChatApp {
         // 更新日志
         const updateTitle = document.querySelector('#update-header h3');
         if (updateTitle) {
-            updateTitle.textContent = t.updateLog + ' v4.4.0';
+            updateTitle.textContent = t.updateLog + ' v4.4.1';
         }
 
         // 个人页
@@ -1643,11 +1652,11 @@ class ChatApp {
         }
 
         // 页脚
-        document.querySelector('.footer-info p:first-child').textContent = 'Tell v4.4.0';
+        document.querySelector('.footer-info p:first-child').textContent = 'Tell v4.4.1';
         document.querySelector('.copyright').textContent = t.copyright;
 
         // 版本信息
-        document.querySelector('.version-info span:first-child').textContent = 'v4.4.0';
+        document.querySelector('.version-info span:first-child').textContent = 'v4.4.1';
 
         // 聊天输入框
         document.getElementById('message-input').placeholder = this.currentLang === 'zh' ? '输入消息...' : 'Type a message...';

@@ -38,7 +38,7 @@
                 </form>
 
                 <div class="version-info">
-                    <span>v4.4.0</span>
+                    <span>v4.4.1</span>
                     <span class="copyright">© 2026 Li Chengyan. All Rights Reserved.</span>
                 </div>
             </div>
@@ -103,10 +103,11 @@
                         <div class="update-info">
                             <div class="update-header" id="update-header" style="cursor: pointer;">
                                 <img src="logo.jpg" alt="Tell Logo" class="update-logo">
-                                <h3>更新日志 v4.4.0</h3>
+                                <h3>更新日志 v4.4.1</h3>
                                 <span class="toggle-arrow">▼</span>
                             </div>
                             <div class="update-content" id="update-content" style="display: none;">
+                                <div class="update-item">✨ v4.4.1: 简化创建群聊为只需群号；修复群头像显示问题</div>
                                 <div class="update-item">✨ v4.4.0: 群设置功能（修改群头像、群账号）；删除搜索加入群按钮；发送按钮改为胶囊形状</div>
                                 <div class="update-item">✨ v4.3.1: 统一网站名称为Tell；同步所有版本号</div>
                                 <div class="update-item">✨ v4.3.0: 群聊消息显示用户名；完全同步版本号</div>
@@ -173,7 +174,7 @@
                             </div>
                         </div>
                         <div class="footer-info">
-                            <p>Tell v4.4.0</p>
+                            <p>Tell v4.4.1</p>
                             <p class="copyright">© 2026 Li Chengyan. All Rights Reserved.</p>
                             <p id="uptime-display" class="uptime"></p>
                         </div>
@@ -241,8 +242,7 @@
                         <button id="close-create-group-modal" class="icon-btn">×</button>
                     </div>
                     <div class="modal-body">
-                        <input type="text" id="group-name-input" placeholder="群名称">
-                        <input type="text" id="group-number-input" placeholder="群号（自定义）">
+                        <input type="text" id="group-number-input" placeholder="输入群号">
                     </div>
                     <div class="modal-footer">
                         <button id="confirm-create-group-btn">创建</button>
