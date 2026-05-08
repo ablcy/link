@@ -52,6 +52,9 @@ class ChatApp {
 
         document.getElementById('leave-group-btn').addEventListener('click', () => this.leaveGroup());
         document.getElementById('dissolve-group-btn').addEventListener('click', () => this.dissolveGroup());
+
+        // 新增：合并搜索入口的加入群聊按钮
+        document.getElementById('confirm-join-group-btn').addEventListener('click', () => this.confirmJoinGroup());
     }
 
     async loadGroups() {
@@ -479,9 +482,20 @@ class ChatApp {
     }
 
     async pollGroupMessages() {
+        // 同时刷新群列表（确保被邀请的人能看到新群）
+        if (this.currentUser) {
+            await this.loadGroups();
+        }
+        
+        // 刷新群消息
         for (const group of this.groups) {
             await this.loadGroupMessages(group.id);
         }
+        
+        // 重新渲染聊天列表
+        this.renderChatList();
+        
+        // 如果在群聊界面，重新渲染群消息
         if (this.currentGroup) {
             this.renderGroupMessages();
         }
@@ -911,31 +925,55 @@ class ChatApp {
         if (e.key !== 'Enter') return;
 
         const searchInput = document.getElementById('search-input');
-        const friendUsername = searchInput.value.trim();
+        const searchText = searchInput.value.trim();
 
-        if (!friendUsername) {
+        if (!searchText) {
             return;
         }
 
-        if (friendUsername === this.currentUser.username) {
+        // 隐藏所有搜索结果
+        document.getElementById('search-result-item-friend').style.display = 'none';
+        document.getElementById('search-result-item-group').style.display = 'none';
+        document.getElementById('search-result').style.display = 'none';
+
+        // 1. 先检查是否是群聊（搜索群号）
+        const groupResult = await this.fetchData(`/api/group/search/${encodeURIComponent(searchText)}`);
+        
+        if (groupResult.success && groupResult.group) {
+            // 检查是否已经在该群聊中
+            const existingGroup = this.groups.find(g => g.id === groupResult.group.id);
+            if (existingGroup) {
+                this.openGroupChat(existingGroup.id);
+                searchInput.value = '';
+                return;
+            }
+            
+            // 显示群聊搜索结果
+            this.searchedGroup = groupResult.group;
+            this.showGroupSearchResult(groupResult.group);
+            return;
+        }
+
+        // 2. 如果不是群号，搜索用户
+        if (searchText === this.currentUser.username) {
             alert('不能添加自己');
             return;
         }
 
-        const existingFriend = this.friends.find(f => f.username === friendUsername);
+        const existingFriend = this.friends.find(f => f.username === searchText);
         if (existingFriend) {
             this.openChat(existingFriend.id);
             searchInput.value = '';
             return;
         }
 
-        const result = await this.fetchData(`/api/user/${encodeURIComponent(friendUsername)}`);
+        const result = await this.fetchData(`/api/user/${encodeURIComponent(searchText)}`);
 
         if (result.success && result.user) {
             this.searchedFriend = result.user;
             this.showSearchResult(result.user);
         } else {
-            alert('用户不存在');
+            alert('用户或群不存在');
         }
     }
 
@@ -943,6 +981,9 @@ class ChatApp {
         const searchResult = document.getElementById('search-result');
         const avatarEl = document.getElementById('search-result-avatar');
         const usernameEl = document.getElementById('search-result-username');
+
+        document.getElementById('search-result-item-friend').style.display = 'flex';
+        document.getElementById('search-result-item-group').style.display = 'none';
 
         if (user.avatar && user.avatar.trim() !== '') {
             avatarEl.innerHTML = `<img src="${user.avatar}" alt="">`;
@@ -952,6 +993,42 @@ class ChatApp {
 
         usernameEl.textContent = user.username;
         searchResult.style.display = 'block';
+    }
+
+    showGroupSearchResult(group) {
+        const searchResult = document.getElementById('search-result');
+        const groupNameEl = document.getElementById('search-group-name');
+        const groupNumberEl = document.getElementById('search-group-number');
+
+        document.getElementById('search-result-item-friend').style.display = 'none';
+        document.getElementById('search-result-item-group').style.display = 'flex';
+
+        groupNameEl.textContent = group.name;
+        groupNumberEl.textContent = '群号: ' + group.group_number;
+        searchResult.style.display = 'block';
+    }
+
+    async confirmJoinGroup() {
+        if (!this.searchedGroup) return;
+
+        this.setButtonLoading('confirm-join-group-btn', true);
+        const result = await this.fetchData('/api/group/join', {
+            method: 'POST',
+            body: JSON.stringify({
+                groupId: this.searchedGroup.id,
+                userId: this.currentUser.id
+            })
+        });
+        this.setButtonLoading('confirm-join-group-btn', false);
+
+        if (result.success) {
+            await this.loadGroups();
+            document.getElementById('search-result').style.display = 'none';
+            document.getElementById('search-input').value = '';
+            this.openGroupChat(this.searchedGroup.id);
+        } else {
+            alert(result.message || '加入群聊失败');
+        }
     }
 
     async confirmAddFriend() {
