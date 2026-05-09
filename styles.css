@@ -763,6 +763,61 @@ form button[type="submit"]:hover {
     color: var(--text-secondary);
 }
 
+/* 加载骨架样式 */
+.loading-skeleton {
+    display: flex;
+    align-items: center;
+    padding: 12px 18px;
+    background: var(--white);
+    border-bottom: 1px solid var(--border-color);
+    margin: 6px 20px;
+    border-radius: 16px;
+    box-shadow: var(--shadow-sm);
+}
+
+.skeleton-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+    flex-shrink: 0;
+}
+
+.skeleton-info {
+    flex: 1;
+    margin-left: 12px;
+}
+
+.skeleton-name {
+    width: 60%;
+    height: 16px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+    margin-bottom: 8px;
+}
+
+.skeleton-preview {
+    width: 40%;
+    height: 12px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+}
+
+@keyframes skeleton-loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
 @media (min-width: 768px) {
     .main-wrapper {
         max-width: none;

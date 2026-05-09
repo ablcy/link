@@ -706,6 +706,15 @@ class ChatApp {
         const username = document.getElementById('login-username').value.trim();
         const password = document.getElementById('login-password').value;
 
+        if (!username || !password) {
+            document.getElementById('login-error').textContent = '请输入账号和密码';
+            return;
+        }
+
+        // 极致优化：立即切换界面，显示加载状态
+        this.showMainScreenWithLoading();
+        
+        // 后台异步登录，不阻塞界面显示
         this.setButtonLoading('login-form-submit-btn', true);
         const result = await this.fetchData('/api/login', {
             method: 'POST',
@@ -717,7 +726,7 @@ class ChatApp {
             this.currentUser = result.user;
             localStorage.setItem('currentUser', JSON.stringify(result.user));
             
-            // 直接使用登录返回的好友和群聊数据，无需额外请求
+            // 直接使用登录返回的好友和群聊数据
             if (result.friends) {
                 this.friends = result.friends;
             }
@@ -725,18 +734,59 @@ class ChatApp {
                 this.groups = result.groups;
             }
             
-            // 优化顺序：先显示界面，再渲染列表，消息在后台加载
-            this.showMainScreen();
+            // 更新用户信息和渲染列表
+            this.updateProfile();
             this.renderChatList();
             
-            // 消息在后台异步加载，不阻塞界面显示
+            // 消息在后台异步加载
             setTimeout(() => {
                 this.loadMessages();
                 this.startPolling();
-            }, 100);
+            }, 50);
         } else {
+            // 登录失败，返回登录界面
+            this.logout();
             document.getElementById('login-error').textContent = result.message || '登录失败';
         }
+    }
+    
+    showMainScreenWithLoading() {
+        // 立即切换到主界面，不等待数据
+        document.getElementById('auth-screen').style.display = 'none';
+        document.getElementById('main-screen').style.display = 'flex';
+        
+        // 显示加载骨架
+        const chatList = document.getElementById('chat-list');
+        chatList.innerHTML = `
+            <div class="loading-skeleton">
+                <div class="skeleton-avatar"></div>
+                <div class="skeleton-info">
+                    <div class="skeleton-name"></div>
+                    <div class="skeleton-preview"></div>
+                </div>
+            </div>
+            <div class="loading-skeleton">
+                <div class="skeleton-avatar"></div>
+                <div class="skeleton-info">
+                    <div class="skeleton-name"></div>
+                    <div class="skeleton-preview"></div>
+                </div>
+            </div>
+            <div class="loading-skeleton">
+                <div class="skeleton-avatar"></div>
+                <div class="skeleton-info">
+                    <div class="skeleton-name"></div>
+                    <div class="skeleton-preview"></div>
+                </div>
+            </div>
+        `;
+        
+        // 更新头像为默认状态
+        const avatarImg = document.getElementById('profile-avatar-img');
+        const avatarText = document.getElementById('profile-avatar');
+        avatarImg.style.display = 'none';
+        avatarText.textContent = '?';
+        avatarText.style.display = 'flex';
     }
 
     async handleRegister(e) {
@@ -1638,7 +1688,7 @@ class ChatApp {
         // 更新日志
         const updateTitle = document.querySelector('#update-header h3');
         if (updateTitle) {
-            updateTitle.textContent = t.updateLog + ' v4.4.16';
+            updateTitle.textContent = t.updateLog + ' v4.4.17';
         }
 
         // 个人页
@@ -1671,11 +1721,11 @@ class ChatApp {
         }
 
         // 页脚
-        document.querySelector('.footer-info p:first-child').textContent = 'Tell v4.4.16';
+        document.querySelector('.footer-info p:first-child').textContent = 'Tell v4.4.17';
         document.querySelector('.copyright').textContent = t.copyright;
 
         // 版本信息
-        document.querySelector('.version-info span:first-child').textContent = 'v4.4.16';
+        document.querySelector('.version-info span:first-child').textContent = 'v4.4.17';
 
         // 聊天输入框
         document.getElementById('message-input').placeholder = this.currentLang === 'zh' ? '输入消息...' : 'Type a message...';
