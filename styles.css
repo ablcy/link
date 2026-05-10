@@ -274,6 +274,19 @@ form button[type="submit"]:hover {
     border-color: var(--talk-blue);
 }
 
+.tab-header {
+    padding: 10px 16px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    background: var(--white);
+}
+
+.tab-header h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
 .chat-list,
 .contacts-list {
     padding: 0;
