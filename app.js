@@ -1788,7 +1788,7 @@ class ChatApp {
         // 更新日志
         const updateTitle = document.querySelector('#update-header h3');
         if (updateTitle) {
-            updateTitle.textContent = t.updateLog + ' v4.4.21';
+            updateTitle.textContent = t.updateLog + ' v4.5.1';
         }
 
         // 个人页
@@ -1821,11 +1821,11 @@ class ChatApp {
         }
 
         // 页脚
-        document.querySelector('.footer-info p:first-child').textContent = 'Tell v4.4.21';
+        document.querySelector('.footer-info p:first-child').textContent = 'Tell v4.5.1';
         document.querySelector('.copyright').textContent = t.copyright;
 
         // 版本信息
-        document.querySelector('.version-info span:first-child').textContent = 'v4.4.21';
+        document.querySelector('.version-info span:first-child').textContent = 'v4.5.1';
 
         // 聊天输入框
         document.getElementById('message-input').placeholder = this.currentLang === 'zh' ? '输入消息...' : 'Type a message...';
