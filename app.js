@@ -15,8 +15,21 @@ class ChatApp {
         this.groups = [];
         this.currentGroup = null;
         this.groupMessages = {};
-        this.burnAfterReadingEnabled = null;
+        this.burnAfterReadingEnabled = this.loadBurnAfterReadingSetting();
         this.init();
+    }
+
+    loadBurnAfterReadingSetting() {
+        try {
+            const saved = localStorage.getItem('burnAfterReading');
+            return saved ? JSON.parse(saved) : null;
+        } catch {
+            return null;
+        }
+    }
+
+    saveBurnAfterReadingSetting(friendId) {
+        localStorage.setItem('burnAfterReading', JSON.stringify(friendId));
     }
 
     init() {
@@ -209,6 +222,7 @@ class ChatApp {
         } else {
             this.burnAfterReadingEnabled = null;
         }
+        this.saveBurnAfterReadingSetting(this.burnAfterReadingEnabled);
     }
 
     closeChatView() {
@@ -1896,7 +1910,7 @@ class ChatApp {
         // 更新日志
         const updateTitle = document.querySelector('#update-header h3');
         if (updateTitle) {
-            updateTitle.textContent = t.updateLog + ' v4.5.4';
+            updateTitle.textContent = t.updateLog + ' v4.5.5';
         }
 
         // 个人页
@@ -1929,11 +1943,11 @@ class ChatApp {
         }
 
         // 页脚
-        document.querySelector('.footer-info p:first-child').textContent = 'Tell v4.5.4';
+        document.querySelector('.footer-info p:first-child').textContent = 'Tell v4.5.5';
         document.querySelector('.copyright').textContent = t.copyright;
 
         // 版本信息
-        document.querySelector('.version-info span:first-child').textContent = 'v4.5.4';
+        document.querySelector('.version-info span:first-child').textContent = 'v4.5.5';
 
         // 聊天输入框
         document.getElementById('message-input').placeholder = this.currentLang === 'zh' ? '输入消息...' : 'Type a message...';
