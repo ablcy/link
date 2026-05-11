@@ -46,7 +46,7 @@ const upload = multer({
 const DATABASE_URL = process.env.DATABASE_URL;
 const SALT_ROUNDS = 10;
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin';
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
 
 let adminTokens = [];
