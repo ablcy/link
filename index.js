@@ -1061,6 +1061,74 @@ app.get('/api/admin/stats/messages', async (req, res) => {
   }
 });
 
+app.get('/api/admin/groups', async (req, res) => {
+  try {
+    let groups;
+    if (DATABASE_URL) {
+      groups = await groupsDB.query('SELECT id, group_number, name, owner_id, created_at FROM "groups" ORDER BY created_at DESC');
+    } else {
+      groups = await promisifyDB(groupsDB.find).call(groupsDB, {}).sort({ created_at: -1 });
+    }
+    
+    const groupList = DATABASE_URL ? groups.rows : groups;
+    
+    const result = await Promise.all(groupList.map(async group => {
+      let memberCount;
+      if (DATABASE_URL) {
+        const countResult = await groupMembersDB.query('SELECT COUNT(*) FROM group_members WHERE group_id = $1', [group.id]);
+        memberCount = countResult.rows[0].count;
+      } else {
+        memberCount = await new Promise((resolve, reject) => {
+          groupMembersDB.count({ group_id: group.id }, (err, n) => {
+            if (err) reject(err);
+            else resolve(n);
+          });
+        });
+      }
+      
+      let ownerName;
+      if (DATABASE_URL) {
+        const ownerResult = await usersDB.query('SELECT username FROM users WHERE id = $1', [group.owner_id]);
+        ownerName = ownerResult.rows[0]?.username || 'Unknown';
+      } else {
+        const owner = await promisifyDB(usersDB.find).call(usersDB, { id: group.owner_id });
+        ownerName = owner[0]?.username || 'Unknown';
+      }
+      
+      return {
+        ...group,
+        member_count: parseInt(memberCount) || 0,
+        owner_name: ownerName
+      };
+    }));
+    
+    res.json({ success: true, groups: result });
+  } catch (error) {
+    console.error('Get groups error:', error);
+    res.status(500).json({ success: false, message: '查询失败' });
+  }
+});
+
+app.delete('/api/admin/groups/:groupId', async (req, res) => {
+  const { groupId } = req.params;
+
+  try {
+    if (DATABASE_URL) {
+      await groupMessagesDB.query('DELETE FROM group_messages WHERE group_id = $1', [groupId]);
+      await groupMembersDB.query('DELETE FROM group_members WHERE group_id = $1', [groupId]);
+      await groupsDB.query('DELETE FROM "groups" WHERE id = $1', [groupId]);
+    } else {
+      await promisifyDB(groupMessagesDB.remove).call(groupMessagesDB, { group_id: groupId }, { multi: true });
+      await promisifyDB(groupMembersDB.remove).call(groupMembersDB, { group_id: groupId }, { multi: true });
+      await promisifyDB(groupsDB.remove).call(groupsDB, { id: groupId }, { multi: false });
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete group error:', error);
+    res.status(500).json({ success: false, message: '删除失败' });
+  }
+});
+
 app.delete('/api/admin/users/:userId', async (req, res) => {
   const { userId } = req.params;
 

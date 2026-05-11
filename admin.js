@@ -3,6 +3,8 @@ class AdminPanel {
         this.baseUrl = window.location.origin;
         this.users = [];
         this.filteredUsers = [];
+        this.groups = [];
+        this.filteredGroups = [];
         this.targetUserId = null;
         this.init();
     }
@@ -51,12 +53,15 @@ class AdminPanel {
         this.bindEvents();
         this.loadStats();
         this.loadUsers();
-        this.addLog('Tell Admin v4.9.2 启动成功', '系统');
+        this.loadGroups();
+        this.addLog('Tell Admin v4.9.3 启动成功', '系统');
     }
 
     bindEvents() {
-        document.getElementById('refresh-btn').addEventListener('click', () => this.loadUsers());
+        document.getElementById('refresh-users-btn').addEventListener('click', () => this.loadUsers());
         document.getElementById('search-user-search').addEventListener('input', (e) => this.searchUsers(e.target.value));
+        document.getElementById('refresh-groups-btn').addEventListener('click', () => this.loadGroups());
+        document.getElementById('search-group-search').addEventListener('input', (e) => this.searchGroups(e.target.value));
         document.getElementById('clear-logs-btn').addEventListener('click', () => this.clearLogs());
         document.getElementById('change-pwd-btn').addEventListener('click', () => this.showChangePasswordModal());
         document.getElementById('toggle-changelog-btn').addEventListener('click', () => this.toggleChangelog());
@@ -158,6 +163,84 @@ class AdminPanel {
             );
         }
         this.renderUsers();
+    }
+
+    async loadGroups() {
+        try {
+            const response = await fetch(`${this.baseUrl}/api/admin/groups`);
+            const data = await response.json();
+
+            if (data.success) {
+                this.groups = data.groups;
+                this.filteredGroups = data.groups;
+                this.renderGroups();
+                this.addLog('群列表已刷新', '系统');
+            }
+        } catch (error) {
+            console.error('Load groups error:', error);
+        }
+    }
+
+    renderGroups() {
+        const tbody = document.getElementById('groups-table-body');
+        
+        if (this.filteredGroups.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6">暂无群聊</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = this.filteredGroups.map(group => {
+            const createdAt = group.created_at ? new Date(group.created_at).toLocaleString('zh-CN') : '未知';
+            return `
+                <tr>
+                    <td>${group.group_number}</td>
+                    <td>${group.name}</td>
+                    <td>${group.owner_name}</td>
+                    <td>${group.member_count}</td>
+                    <td>${createdAt}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-danger btn-sm" onclick="admin.deleteGroup('${group.id}', '${group.name}')">解散</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    searchGroups(keyword) {
+        if (!keyword) {
+            this.filteredGroups = this.groups;
+        } else {
+            this.filteredGroups = this.groups.filter(g => 
+                g.name.toLowerCase().includes(keyword.toLowerCase()) ||
+                g.group_number.toLowerCase().includes(keyword.toLowerCase()) ||
+                g.owner_name.toLowerCase().includes(keyword.toLowerCase())
+            );
+        }
+        this.renderGroups();
+    }
+
+    async deleteGroup(groupId, groupName) {
+        if (!confirm(`确定要解散群聊 "${groupName}" 吗？此操作不可恢复！`)) return;
+
+        try {
+            const response = await fetch(`${this.baseUrl}/api/admin/groups/${groupId}`, {
+                method: 'DELETE'
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                this.loadGroups();
+                this.addLog(`群聊 ${groupName} 已解散`, '删除');
+            } else {
+                alert('解散失败');
+            }
+        } catch (error) {
+            console.error('Delete group error:', error);
+            alert('解散失败');
+        }
     }
 
     showChangePasswordModal() {
