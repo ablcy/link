@@ -210,7 +210,7 @@ if (DATABASE_URL) {
   groupMembersDB = db;
   groupMessagesDB = db;
 } else {
-  const Datastore = require('nedb');
+  const Datastore = require('@seald-io/nedb');
   usersDB = new Datastore({ filename: './data/users.db', autoload: true });
   friendshipsDB = new Datastore({ filename: './data/friendships.db', autoload: true });
   messagesDB = new Datastore({ filename: './data/messages.db', autoload: true });
@@ -351,10 +351,18 @@ initDB().then(() => {
 function promisifyDB(method) {
   return function(query, options = {}) {
     return new Promise((resolve, reject) => {
-      method.call(this, query, options, (err, docs) => {
-        if (err) reject(err);
-        else resolve(docs);
-      });
+      const methodString = method.toString();
+      if (methodString.includes('insert')) {
+        method.call(this, query, (err, doc) => {
+          if (err) reject(err);
+          else resolve(doc);
+        });
+      } else {
+        method.call(this, query, options, (err, docs) => {
+          if (err) reject(err);
+          else resolve(docs);
+        });
+      }
     });
   };
 }

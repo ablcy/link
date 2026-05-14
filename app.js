@@ -1,4 +1,4 @@
-const APP_VERSION = 'v5.9.20';
+const APP_VERSION = 'v5.9.21';
 
 class ChatApp {
     constructor() {
@@ -1637,8 +1637,6 @@ class ChatApp {
         this.setButtonLoading('login-form-submit-btn', true);
         document.getElementById('login-error').textContent = '';
 
-        const startTime = performance.now();
-
         const result = await this.fetchData('/api/login', {
             method: 'POST',
             body: JSON.stringify({ username, password })
@@ -1647,55 +1645,35 @@ class ChatApp {
         if (result.success) {
             this.currentUser = result.user;
             
-            // 极致优化：使用setTimeout(0)延迟写入localStorage，完全不阻塞主线程
-            setTimeout(() => {
-                try {
-                    localStorage.setItem('currentUser', JSON.stringify(result.user));
-                } catch (e) {
-                    this.cleanupLocalStorage();
-                }
-            }, 0);
+            try {
+                localStorage.setItem('currentUser', JSON.stringify(result.user));
+            } catch (e) {
+                this.cleanupLocalStorage();
+            }
 
             if (result.friends) this.friends = result.friends;
             if (result.groups) this.groups = result.groups;
 
-            // 立即切换界面（最快路径）- 使用visibility替代display避免重排
-            const authScreen = document.getElementById('auth-screen');
-            const mainScreen = document.getElementById('main-screen');
-            authScreen.style.visibility = 'hidden';
-            authScreen.style.position = 'absolute';
-            mainScreen.style.visibility = 'visible';
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('main-screen').style.display = 'flex';
             
-            // 最小化同步操作：只更新用户名，头像用首字母占位
             this.updateProfileSkeleton();
-
-            // 超速优化：使用setTimeout(0)确保立即让出主线程
+            this.renderChatListUltraFast();
+            this.renderContactsUltraFast();
+            
+            await this.loadMessagesFast();
+            
+            this.setButtonLoading('login-form-submit-btn', false);
+            
             setTimeout(() => {
-                this.renderChatListUltraFast();
-                setTimeout(() => {
-                    this.renderContactsUltraFast();
-                    this.setButtonLoading('login-form-submit-btn', false);
-                    
-                    // 后台懒加载头像（非阻塞）
-                    setTimeout(() => {
-                        this.lazyLoadAvatars();
-                    }, 30);
-                }, 0);
-            }, 0);
-
-            // 延迟加载消息和socket（非关键路径）- 进一步延迟
-            setTimeout(() => {
-                this.loadMessagesFast();
+                this.lazyLoadAvatars();
             }, 100);
             
             setTimeout(() => {
                 this.startPolling();
                 this.startPasswordVersionCheck();
                 this.loginSocket();
-            }, 500);
-
-            const endTime = performance.now();
-            console.log(`Login completed in ${(endTime - startTime).toFixed(2)}ms`);
+            }, 300);
         } else {
             this.setButtonLoading('login-form-submit-btn', false);
             document.getElementById('login-error').textContent = result.message || '登录失败';
