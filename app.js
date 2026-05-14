@@ -1602,20 +1602,25 @@ class ChatApp {
                 localStorage.setItem('cachedGroups', JSON.stringify(result.groups));
             }
 
-            // 立即显示主界面
+            // 立即显示主界面（最小化DOM操作）
             this.showMainScreen();
             this.updateProfile();
-            this.renderChatList();
-            this.renderContacts();
-
-            this.setButtonLoading('login-form-submit-btn', false);
+            
+            // 使用requestAnimationFrame异步渲染，不阻塞主线程
+            requestAnimationFrame(() => {
+                this.renderChatListFast();
+                requestAnimationFrame(() => {
+                    this.renderContactsFast();
+                    this.setButtonLoading('login-form-submit-btn', false);
+                });
+            });
 
             // 后台异步加载其他内容
             setTimeout(() => {
                 this.loadMessages();
                 this.startPolling();
                 this.startPasswordVersionCheck();
-            }, 0);
+            }, 50);
             
             // 登录socket
             this.loginSocket();
@@ -1920,6 +1925,85 @@ class ChatApp {
         }
         
         chatList.innerHTML = html;
+    }
+
+    renderChatListFast() {
+        const chatList = document.getElementById('chat-list');
+        const groupsLen = this.groups.length;
+        const friendsLen = this.friends.length;
+        
+        if (groupsLen === 0 && friendsLen === 0) {
+            chatList.innerHTML = '<div class="empty-state">暂无好友或群聊，请搜索添加</div>';
+            return;
+        }
+
+        const arr = [];
+        const push = arr.push.bind(arr);
+
+        for (let i = 0; i < groupsLen; i++) {
+            const g = this.groups[i];
+            const msgs = this.groupMessages[g.id];
+            const lastMsg = msgs && msgs.length ? msgs[msgs.length - 1] : null;
+            const avatar = g.avatar && g.avatar.trim() 
+                ? `<div style="width:100%;height:100%;border-radius:50%;overflow:hidden;"><img src="${g.avatar}" alt="" style="width:100%;height:100%;object-fit:cover;"></div>`
+                : `<div style="width:100%;height:100%;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);color:white;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:500;">G</div>`;
+            
+            push(`<div class="chat-item group-item" data-group-id="${g.id}" onclick="app.openGroupChat('${g.id}')"><div class="avatar">${avatar}</div><div class="chat-info"><div class="chat-name">${g.name}${g.role === 'owner' ? ' (群主)' : ''}</div><div class="chat-preview">${lastMsg ? lastMsg.content : '暂无消息'}</div></div><div>${lastMsg ? `<div class="chat-time">${lastMsg.time}</div>` : ''}</div></div>`);
+        }
+
+        for (let i = 0; i < friendsLen; i++) {
+            const f = this.friends[i];
+            const msgs = this.messages[f.id];
+            const lastMsg = msgs && msgs.length ? msgs[msgs.length - 1] : null;
+            const unread = this.getUnreadCount(f.id);
+            const initial = f.username ? f.username.charAt(0).toUpperCase() : '?';
+            const avatar = f.avatar && f.avatar.trim()
+                ? `<div style="width:100%;height:100%;border-radius:50%;overflow:hidden;"><img src="${f.avatar}" alt="" style="width:100%;height:100%;object-fit:cover;"></div>`
+                : `<div style="width:100%;height:100%;border-radius:50%;background:var(--talk-blue);color:white;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:500;">${initial}</div>`;
+            
+            push(`<div class="chat-item" data-friend-id="${f.id}" onclick="app.openChat('${f.id}')"><div class="avatar">${avatar}</div><div class="chat-info"><div class="chat-name">${f.id === this.currentUser?.id ? f.username + ' (我)' : f.username}</div><div class="chat-preview">${lastMsg ? (lastMsg.type === 'image' ? '[图片]' : lastMsg.content) : '暂无消息'}</div></div><div>${lastMsg ? `<div class="chat-time">${lastMsg.time}</div>` : ''}${unread > 0 ? `<div class="unread-badge">${unread}</div>` : ''}</div></div>`);
+        }
+
+        chatList.innerHTML = arr.join('');
+    }
+
+    renderContactsFast() {
+        const groupsSection = document.getElementById('contacts-groups-section');
+        const friendsSection = document.getElementById('contacts-friends-section');
+        const groupList = document.getElementById('contacts-group-list');
+        const friendList = document.getElementById('contacts-friend-list');
+        const groupsLen = this.groups.length;
+        const friendsLen = this.friends.length;
+
+        if (groupsLen > 0) {
+            groupsSection.style.display = 'block';
+            const arr = [];
+            const push = arr.push.bind(arr);
+            for (let i = 0; i < groupsLen; i++) {
+                const g = this.groups[i];
+                push(`<div class="contact-item" data-group-id="${g.id}"><div class="avatar" style="background:linear-gradient(135deg,#667eea,#764ba2);">${g.avatar ? `<img src="${g.avatar}" alt="">` : '群'}</div><span class="contact-name">${g.name || g.account}</span></div>`);
+            }
+            groupList.innerHTML = arr.join('');
+        } else {
+            groupsSection.style.display = 'none';
+            groupList.innerHTML = '';
+        }
+
+        if (friendsLen > 0) {
+            friendsSection.style.display = 'block';
+            const arr = [];
+            const push = arr.push.bind(arr);
+            const userId = this.currentUser?.id;
+            for (let i = 0; i < friendsLen; i++) {
+                const f = this.friends[i];
+                const name = f.nickname || f.username;
+                push(`<div class="contact-item" data-friend-id="${f.id}"><div class="avatar" style="background:linear-gradient(135deg,var(--talk-blue),var(--talk-dark-blue));">${f.avatar ? `<img src="${f.avatar}" alt="">` : name.charAt(0).toUpperCase()}</div><span class="contact-name">${name}${f.id === userId ? ' (我)' : ''}</span></div>`);
+            }
+            friendList.innerHTML = arr.join('');
+        } else {
+            friendsSection.style.display = 'none';
+            friendList.innerHTML = '';
+        }
     }
     
     _generateChatListHtml() {
@@ -2784,11 +2868,11 @@ class ChatApp {
         }
 
         // 页脚
-        document.querySelector('.footer-info p:first-child').textContent = 'Tell v5.9.4';
+        document.querySelector('.footer-info p:first-child').textContent = 'Tell v5.9.7';
         document.querySelector('.copyright').textContent = t.copyright;
 
         // 版本信息
-        document.querySelector('.version-info span:first-child').textContent = 'v5.9.6';
+        document.querySelector('.version-info span:first-child').textContent = 'v5.9.7';
 
         // 聊天输入框
         document.getElementById('message-input').placeholder = this.currentLang === 'zh' ? '输入消息...' : 'Type a message...';
