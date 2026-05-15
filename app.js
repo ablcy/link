@@ -988,14 +988,15 @@ class ChatApp {
                 </div>`;
             }
 
+            const displayName = sender ? sender.username : (msg.senderName || '用户');
+            const textColor = isMine ? 'white' : 'var(--text-primary)';
+            
             let messageContent = '';
             if (msg.type === 'image') {
                 messageContent = `<img src="${msg.content}" alt="" style="max-width: 200px; border-radius: 8px;">`;
             } else {
-                messageContent = `<p>${msg.content}</p>`;
+                messageContent = `<span style="color:${textColor};line-height:1.4;">${msg.content}</span>`;
             }
-
-            const displayName = sender ? sender.username : (msg.senderName || '用户');
             
             return `
                 <div class="message-item" style="display: flex; flex-direction: ${isMine ? 'row-reverse' : 'row'}; margin-bottom: 12px; padding: 0 12px;">
@@ -1004,7 +1005,7 @@ class ChatApp {
                     </div>
                     <div style="display: flex; flex-direction: column; align-items: ${isMine ? 'flex-end' : 'flex-start'}; max-width: 70%;">
                         <span style="font-size: 11px; color: #999; margin-bottom: 2px; padding: 0 4px;">${isMine ? '我' : displayName}</span>
-                        <div style="background: ${isMine ? 'linear-gradient(135deg, var(--talk-blue), var(--talk-dark-blue))' : 'var(--white)'}; color: ${isMine ? 'white' : 'var(--text-primary)'}; padding: 10px 14px; border-radius: ${isMine ? '18px 18px 4px 18px' : '18px 18px 18px 4px'}; box-shadow: var(--shadow-sm);">
+                        <div style="background: ${isMine ? 'linear-gradient(135deg, var(--talk-blue), var(--talk-dark-blue))' : 'var(--white)'}; padding: 10px 14px; border-radius: ${isMine ? '18px 18px 4px 18px' : '18px 18px 18px 4px'}; box-shadow: var(--shadow-sm);">
                             ${messageContent}
                         </div>
                         <span style="font-size: 11px; color: #999; margin-top: 4px; padding: 0 4px;">${msg.time}</span>
@@ -2623,23 +2624,23 @@ class ChatApp {
                 }
             }
 
-            let messageContent = '';
-            if (msg.type === 'image') {
-                messageContent = `<img src="${msg.content}" alt="" style="max-width:200px;border-radius:8px;">`;
-            } else {
-                messageContent = `<p>${msg.content}</p>`;
-            }
-
             const direction = isMine ? 'row-reverse' : 'row';
             const alignItems = isMine ? 'flex-end' : 'flex-start';
             const bgColor = isMine ? 'linear-gradient(135deg,var(--talk-blue),var(--talk-dark-blue))' : 'var(--white)';
             const textColor = isMine ? 'white' : 'var(--text-primary)';
             const borderRadius = isMine ? '18px 18px 4px 18px' : '18px 18px 18px 4px';
 
+            let messageContent = '';
+            if (msg.type === 'image') {
+                messageContent = `<img src="${msg.content}" alt="" style="max-width:200px;border-radius:8px;">`;
+            } else {
+                messageContent = `<span style="color:${textColor};line-height:1.4;">${msg.content}</span>`;
+            }
+
             html += `<div class="message-item" style="display:flex;flex-direction:${direction};margin-bottom:12px;padding:0 12px;">` +
                 `<div class="avatar-container" style="flex-shrink:0;margin-top:4px;">${avatarContent}</div>` +
                 `<div style="display:flex;flex-direction:column;align-items:${alignItems};max-width:70%;">` +
-                `<div style="background:${bgColor};color=${textColor};padding:10px 14px;border-radius:${borderRadius};box-shadow:var(--shadow-sm);">${messageContent}</div>` +
+                `<div style="background:${bgColor};padding:10px 14px;border-radius:${borderRadius};box-shadow:var(--shadow-sm);">${messageContent}</div>` +
                 `<span style="font-size:11px;color:#999;margin-top:4px;padding:0 4px;">${msg.time}</span>` +
                 `</div></div>`;
         }
