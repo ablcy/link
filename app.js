@@ -78,15 +78,21 @@ class ChatApp {
                 this.notificationSettings = data.settings || {};
                 this.globalMessageNotification = data.globalMessageNotification !== false;
                 this.globalCallNotification = data.globalCallNotification !== false;
+                this.floatingNotification = data.floatingNotification !== false;
+                this.lockscreenNotification = data.lockscreenNotification !== false;
             } else {
                 this.notificationSettings = {};
                 this.globalMessageNotification = true;
                 this.globalCallNotification = true;
+                this.floatingNotification = true;
+                this.lockscreenNotification = true;
             }
         } catch {
             this.notificationSettings = {};
             this.globalMessageNotification = true;
             this.globalCallNotification = true;
+            this.floatingNotification = true;
+            this.lockscreenNotification = true;
         }
     }
 
@@ -94,8 +100,11 @@ class ChatApp {
         localStorage.setItem('notificationSettings', JSON.stringify({
             settings: this.notificationSettings,
             globalMessageNotification: this.globalMessageNotification,
-            globalCallNotification: this.globalCallNotification
+            globalCallNotification: this.globalCallNotification,
+            floatingNotification: this.floatingNotification,
+            lockscreenNotification: this.lockscreenNotification
         }));
+        this.updateServiceWorkerNotificationSettings();
     }
 
     isNotificationEnabled(userId, isGroup = false) {
@@ -1737,6 +1746,8 @@ class ChatApp {
         document.getElementById('close-notification-modal-btn').addEventListener('click', () => this.closeNotificationSettingsModal());
         document.getElementById('global-message-notification-toggle').addEventListener('change', (e) => this.toggleGlobalMessageNotification(e.target.checked));
         document.getElementById('global-call-notification-toggle').addEventListener('change', (e) => this.toggleGlobalCallNotification(e.target.checked));
+        document.getElementById('floating-notification-toggle').addEventListener('change', (e) => this.toggleFloatingNotification(e.target.checked));
+        document.getElementById('lockscreen-notification-toggle').addEventListener('change', (e) => this.toggleLockscreenNotification(e.target.checked));
         document.getElementById('share-app-btn').addEventListener('click', () => this.shareApp());
         document.getElementById('admin-panel-btn').addEventListener('click', () => window.location.href = '/admin');
 
@@ -3311,11 +3322,25 @@ class ChatApp {
     showNotificationSettingsModal() {
         document.getElementById('global-message-notification-toggle').checked = this.globalMessageNotification;
         document.getElementById('global-call-notification-toggle').checked = this.globalCallNotification;
+        document.getElementById('floating-notification-toggle').checked = this.floatingNotification;
+        document.getElementById('lockscreen-notification-toggle').checked = this.lockscreenNotification;
         document.getElementById('notification-settings-modal').style.display = 'flex';
     }
 
     closeNotificationSettingsModal() {
         document.getElementById('notification-settings-modal').style.display = 'none';
+    }
+
+    updateServiceWorkerNotificationSettings() {
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({
+                type: 'UPDATE_NOTIFICATION_SETTINGS',
+                settings: {
+                    floatingNotification: this.floatingNotification,
+                    lockscreenNotification: this.lockscreenNotification
+                }
+            });
+        }
     }
 
     toggleGlobalMessageNotification(enabled) {
@@ -3325,6 +3350,16 @@ class ChatApp {
 
     toggleGlobalCallNotification(enabled) {
         this.globalCallNotification = enabled;
+        this.saveNotificationSettings();
+    }
+
+    toggleFloatingNotification(enabled) {
+        this.floatingNotification = enabled;
+        this.saveNotificationSettings();
+    }
+
+    toggleLockscreenNotification(enabled) {
+        this.lockscreenNotification = enabled;
         this.saveNotificationSettings();
     }
 

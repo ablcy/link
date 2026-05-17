@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tell-v5.9.46';
+const CACHE_NAME = 'tell-v5.9.47';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -13,7 +13,12 @@ const STATIC_ASSETS = [
   '/admin.js'
 ];
 
-const API_CACHE_NAME = 'tell-api-v5.9.46';
+const API_CACHE_NAME = 'tell-api-v5.9.47';
+
+let notificationSettings = {
+  floatingNotification: true,
+  lockscreenNotification: true
+};
 const API_ROUTES = [
   '/api/user',
   '/api/friends',
@@ -148,6 +153,8 @@ self.addEventListener('push', (event) => {
     tag: data.tag || 'default',
     renotify: data.renotify || true,
     vibrate: [100, 50, 100],
+    silent: !notificationSettings.floatingNotification,
+    requireInteraction: notificationSettings.lockscreenNotification,
     data: data.data || {},
     actions: data.actions || [
       { action: 'open', title: '查看' },
@@ -204,6 +211,13 @@ self.addEventListener('message', (event) => {
     }).then(() => {
       event.ports[0].postMessage({ success: true });
     });
+  }
+  if (event.data && event.data.type === 'UPDATE_NOTIFICATION_SETTINGS') {
+    notificationSettings = {
+      ...notificationSettings,
+      ...event.data.settings
+    };
+    console.log('[SW] Notification settings updated:', notificationSettings);
   }
 });
 
