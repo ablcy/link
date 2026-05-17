@@ -350,7 +350,7 @@ initDB().then(() => {
 });
 
 let AI_AGENT_ID = null;
-const AI_AGENT_USERNAME = 'AI助手';
+const AI_AGENT_USERNAME = 'AI';
 const AI_AGENT_NICKNAME = 'AI智能助手';
 let AI_API_KEY = process.env.AI_API_KEY || 'de2da1e5f1f24c54b645051fbe551e32.OdKI3urA59V4evNo';
 
