@@ -592,7 +592,7 @@ class ChatApp {
             }
             const exists = this.messages[chatPartnerId].some(m => m.id === data.id);
             if (!exists) {
-                this.messages[chatPartnerId].push({
+                const newMsg = {
                     id: data.id,
                     sender_id: data.sender_id,
                     senderId: data.sender_id,
@@ -600,9 +600,33 @@ class ChatApp {
                     content: data.content,
                     type: data.type || 'text',
                     time: data.time,
-                    timestamp: data.timestamp
-                });
+                    timestamp: data.timestamp,
+                    read: true // 正在聊天时收到的消息自动标记为已读
+                };
+                this.messages[chatPartnerId].push(newMsg);
                 this.renderMessages(true);
+                this.markMessagesAsRead(chatPartnerId); // 确保后端也标记为已读
+            }
+        } else {
+            // 不在聊天窗口时收到新消息，标记为未读
+            if (!this.messages[chatPartnerId]) {
+                this.messages[chatPartnerId] = [];
+            }
+            const exists = this.messages[chatPartnerId].some(m => m.id === data.id);
+            if (!exists) {
+                const newMsg = {
+                    id: data.id,
+                    sender_id: data.sender_id,
+                    senderId: data.sender_id,
+                    receiver_id: data.receiver_id,
+                    content: data.content,
+                    type: data.type || 'text',
+                    time: data.time,
+                    timestamp: data.timestamp,
+                    read: false // 不在聊天窗口时标记为未读
+                };
+                this.messages[chatPartnerId].push(newMsg);
+                this.renderChatList(); // 更新聊天列表显示未读消息数
             }
         }
 
