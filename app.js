@@ -2886,6 +2886,11 @@ class ChatApp {
             container.innerHTML = '<div class="empty-chat"><p>开始聊天吧！</p></div>';
             delete this.messages[this.currentFriend.id];
         }
+        
+        if (this.currentFriend) {
+            this.markMessagesAsRead(this.currentFriend.id);
+        }
+        
         document.getElementById('chat-view').style.display = 'none';
         this.currentFriend = null;
         this.renderChatList();
@@ -2966,7 +2971,9 @@ class ChatApp {
         container.innerHTML = html;
 
         if (scrollToBottom) {
-            container.scrollTop = container.scrollHeight;
+            requestAnimationFrame(() => {
+                container.scrollTop = container.scrollHeight;
+            });
         }
     }
 

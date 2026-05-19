@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tell-v5.9.52';
+const CACHE_NAME = 'tell-v5.9.53';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -13,7 +13,7 @@ const STATIC_ASSETS = [
   '/admin.js'
 ];
 
-const API_CACHE_NAME = 'tell-api-v5.9.52';
+const API_CACHE_NAME = 'tell-api-v5.9.53';
 
 let notificationSettings = {
   floatingNotification: true,
@@ -107,7 +107,7 @@ async function cacheFirst(request, cacheName) {
 async function networkFirst(request, cacheName) {
   try {
     const networkResponse = await fetch(request);
-    if (networkResponse.ok) {
+    if (networkResponse.ok && request.method === 'GET') {
       const cache = await caches.open(cacheName);
       cache.put(request, networkResponse.clone());
     }
