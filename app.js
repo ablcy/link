@@ -1,4 +1,4 @@
-const APP_VERSION = typeof VERSION !== 'undefined' ? VERSION.full() : 'v5.9.44';
+const APP_VERSION = typeof VERSION !== 'undefined' ? VERSION.full() : 'v5.9.23';
 
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', async () => {
@@ -35,7 +35,6 @@ if ('serviceWorker' in navigator) {
 
 class ChatApp {
     constructor() {
-        this.AI_AGENT_USERNAME = 'AI助手';
         this.currentUser = null;
         this.currentFriend = null;
         this.messages = {};
@@ -61,9 +60,6 @@ class ChatApp {
         this.remoteStream = null;
         this.isInCall = false;
         this.currentCallTarget = null;
-        this.callRingInterval = null;
-        this.callAudioContext = null;
-        this.messagesLoaded = false;
         
         this.loadBurnAfterReadingSetting();
         this.loadNotificationSettings();
@@ -75,55 +71,25 @@ class ChatApp {
             const saved = localStorage.getItem('notificationSettings');
             if (saved) {
                 const data = JSON.parse(saved);
-                this.notificationSettings = data.settings || {};
-                this.globalMessageNotification = data.globalMessageNotification !== false;
-                this.globalCallNotification = data.globalCallNotification !== false;
-                this.floatingNotification = data.floatingNotification !== false;
-                this.lockscreenNotification = data.lockscreenNotification !== false;
+                this.notificationSettings = data;
             } else {
                 this.notificationSettings = {};
-                this.globalMessageNotification = true;
-                this.globalCallNotification = true;
-                this.floatingNotification = true;
-                this.lockscreenNotification = true;
             }
         } catch {
             this.notificationSettings = {};
-            this.globalMessageNotification = true;
-            this.globalCallNotification = true;
-            this.floatingNotification = true;
-            this.lockscreenNotification = true;
         }
     }
 
     saveNotificationSettings() {
-        localStorage.setItem('notificationSettings', JSON.stringify({
-            settings: this.notificationSettings,
-            globalMessageNotification: this.globalMessageNotification,
-            globalCallNotification: this.globalCallNotification,
-            floatingNotification: this.floatingNotification,
-            lockscreenNotification: this.lockscreenNotification
-        }));
-        this.updateServiceWorkerNotificationSettings();
+        localStorage.setItem('notificationSettings', JSON.stringify(this.notificationSettings));
     }
 
     isNotificationEnabled(userId, isGroup = false) {
-        if (isGroup) {
-            return true;
-        }
-        const key = `friend_${userId}`;
+        const key = isGroup ? `group_${userId}` : `friend_${userId}`;
         if (this.notificationSettings[key] !== undefined) {
             return this.notificationSettings[key];
         }
         return true;
-    }
-
-    isGlobalMessageNotificationEnabled() {
-        return this.globalMessageNotification;
-    }
-
-    isGlobalCallNotificationEnabled() {
-        return this.globalCallNotification;
     }
 
     setNotificationEnabled(userId, enabled, isGroup = false) {
@@ -231,16 +197,6 @@ class ChatApp {
         // 监听通话拒绝
         this.socket.on('call-reject', (data) => {
             this.handleCallReject(data);
-        });
-
-        // 监听新消息
-        this.socket.on('new-message', (data) => {
-            this.handleNewMessage(data);
-        });
-
-        // 监听被添加好友通知
-        this.socket.on('friend-added', (data) => {
-            this.handleFriendAdded(data);
         });
     }
     
@@ -591,113 +547,10 @@ class ChatApp {
         pc.onsignalingstatechange = () => {
             console.log('Signaling state:', pc.signalingState);
         };
-
+        
         return pc;
     }
-
-    handleNewMessage(data) {
-        const senderId = data.sender_id;
-        const receiverId = data.receiver_id;
-        const chatPartnerId = senderId === this.currentUser?.id ? receiverId : senderId;
-
-        if (this.currentFriend?.id === chatPartnerId) {
-            if (!this.messages[chatPartnerId]) {
-                this.messages[chatPartnerId] = [];
-            }
-            const exists = this.messages[chatPartnerId].some(m => m.id === data.id);
-            if (!exists) {
-                const newMsg = {
-                    id: data.id,
-                    sender_id: data.sender_id,
-                    senderId: data.sender_id,
-                    receiver_id: data.receiver_id,
-                    content: data.content,
-                    type: data.type || 'text',
-                    time: data.time,
-                    timestamp: data.timestamp,
-                    read: true // 正在聊天时收到的消息自动标记为已读
-                };
-                this.messages[chatPartnerId].push(newMsg);
-                this.renderMessages(true);
-                this.markMessagesAsRead(chatPartnerId); // 确保后端也标记为已读
-            }
-        } else {
-            // 不在聊天窗口时收到新消息，标记为未读
-            if (!this.messages[chatPartnerId]) {
-                this.messages[chatPartnerId] = [];
-            }
-            const exists = this.messages[chatPartnerId].some(m => m.id === data.id);
-            if (!exists) {
-                const newMsg = {
-                    id: data.id,
-                    sender_id: data.sender_id,
-                    senderId: data.sender_id,
-                    receiver_id: data.receiver_id,
-                    content: data.content,
-                    type: data.type || 'text',
-                    time: data.time,
-                    timestamp: data.timestamp,
-                    read: false // 不在聊天窗口时标记为未读
-                };
-                this.messages[chatPartnerId].push(newMsg);
-                this.renderChatList(); // 更新聊天列表显示未读消息数
-            }
-        }
-
-        if (data.sender_username !== this.AI_AGENT_USERNAME && this.currentUser?.id === receiverId) {
-            if (this.isGlobalMessageNotificationEnabled() && this.isNotificationEnabled(senderId, false)) {
-                this.playNotificationSound('message');
-            }
-            const sender = this.friends.find(f => f.id === senderId);
-            if (sender) {
-                this.showToast(`${sender.username}: ${data.content.substring(0, 30)}`);
-            }
-        }
-    }
-
-    playCallRingtone() {
-        this.stopCallRingtone();
-        try {
-            if (!this.callAudioContext) {
-                this.callAudioContext = new (window.AudioContext || window.webkitAudioContext)();
-            }
-
-            const playOnce = () => {
-                const audioContext = this.callAudioContext;
-
-                if (audioContext.state === 'suspended') {
-                    audioContext.resume();
-                }
-
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
-
-                oscillator.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-
-                oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-                oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
-                oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.2);
-                oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.3);
-                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
-                oscillator.start(audioContext.currentTime);
-                oscillator.stop(audioContext.currentTime + 0.4);
-            };
-            playOnce();
-            this.callRingInterval = setInterval(playOnce, 1500);
-        } catch (e) {
-            console.log('[App] Cannot play call ringtone:', e);
-        }
-    }
-
-    stopCallRingtone() {
-        if (this.callRingInterval) {
-            clearInterval(this.callRingInterval);
-            this.callRingInterval = null;
-        }
-    }
-
+    
     handleIncomingCall(data) {
         if (this.isInCall) {
             this.socket.emit('call-reject', { targetId: data.from });
@@ -712,8 +565,8 @@ class ChatApp {
 
         this.isInCall = true;
 
-        if (this.isGlobalCallNotificationEnabled() && this.isNotificationEnabled(data.from, false)) {
-            this.playCallRingtone();
+        if (this.isNotificationEnabled(data.from, false)) {
+            this.playNotificationSound('call');
         }
 
         // 显示来电界面
@@ -738,11 +591,6 @@ class ChatApp {
     
     async acceptCall() {
         try {
-            this.stopCallRingtone();
-        } catch (e) {
-            console.log('[App] Error stopping ringtone:', e);
-        }
-        try {
             // 检查浏览器是否支持 mediaDevices
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                 throw new Error('您的浏览器不支持视频通话功能');
@@ -759,9 +607,10 @@ class ChatApp {
             // 获取本地媒体流（视频+音频）
             this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
 
-            // 确保音频上下文被激活（复用已有的 callAudioContext）
-            if (this.callAudioContext && this.callAudioContext.state === 'suspended') {
-                await this.callAudioContext.resume();
+            // 确保音频上下文被激活
+            if (window.AudioContext || window.webkitAudioContext) {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                await audioContext.resume();
             }
 
             // 添加本地流
@@ -804,43 +653,31 @@ class ChatApp {
     }
     
     rejectCall() {
-        this.stopCallRingtone();
         this.socket.emit('call-reject', { targetId: this.currentCallTarget.id });
         this.endCall();
     }
     
     handleAnswer(data) {
-        try {
-            this.stopCallRingtone();
-        } catch (e) {
-            console.log('[App] Error stopping ringtone:', e);
-        }
-        try {
-            this.peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-            this.updateCallModal('connected');
-        } catch (e) {
-            console.log('[App] Error setting remote description:', e);
-        }
+        this.peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+        this.updateCallModal('connected');
     }
-
+    
     handleIceCandidate(data) {
         if (data.candidate && this.peerConnection) {
             this.peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
         }
     }
-
+    
     handleCallEnd(data) {
-        alert('对方已挂断通话');
         this.endCall();
     }
-
+    
     handleCallReject(data) {
         alert('对方拒绝了通话');
         this.endCall();
     }
     
     endCall() {
-        this.stopCallRingtone();
         this.isInCall = false;
         this.remoteStreamPlaying = false;
         this.isVideoPlaying = false;
@@ -1225,28 +1062,6 @@ class ChatApp {
     toggleGroupNotification(e) {
         if (!this.currentGroup) return;
         this.setNotificationEnabled(this.currentGroup.id, e.target.checked, true);
-    }
-
-    handleFriendAdded(data) {
-        const newFriend = {
-            id: data.friendId,
-            username: data.friendUsername,
-            avatar: data.friendAvatar,
-            nickname: data.friendNickname || ''
-        };
-
-        const exists = this.friends.some(f => f.id === newFriend.id);
-        if (!exists) {
-            this.friends.push(newFriend);
-            this.messages[newFriend.id] = [];
-            this.renderChatList();
-            this.renderContacts();
-        }
-
-        if (this.isGlobalMessageNotificationEnabled()) {
-            this.playNotificationSound('message');
-        }
-        this.showToast(`${newFriend.username} 已添加你为好友`);
     }
 
     renderGroupMessages(scrollToBottom = false) {
@@ -1736,7 +1551,8 @@ class ChatApp {
                 
                 if (!result.success) {
                     this.stopPasswordVersionCheck();
-                    this.logout(true);
+                    this.logout();
+                    alert('密码已被修改，请重新登录');
                 }
             } catch (error) {
                 // 忽略网络错误
@@ -1768,12 +1584,6 @@ class ChatApp {
         });
 
         document.getElementById('logout-btn').addEventListener('click', () => this.logout());
-        document.getElementById('notification-settings-btn').addEventListener('click', () => this.showNotificationSettingsModal());
-        document.getElementById('close-notification-modal-btn').addEventListener('click', () => this.closeNotificationSettingsModal());
-        document.getElementById('global-message-notification-toggle').addEventListener('change', (e) => this.toggleGlobalMessageNotification(e.target.checked));
-        document.getElementById('global-call-notification-toggle').addEventListener('change', (e) => this.toggleGlobalCallNotification(e.target.checked));
-        document.getElementById('floating-notification-toggle').addEventListener('change', (e) => this.toggleFloatingNotification(e.target.checked));
-        document.getElementById('lockscreen-notification-toggle').addEventListener('change', (e) => this.toggleLockscreenNotification(e.target.checked));
         document.getElementById('share-app-btn').addEventListener('click', () => this.shareApp());
         document.getElementById('admin-panel-btn').addEventListener('click', () => window.location.href = '/admin');
 
@@ -2300,8 +2110,8 @@ class ChatApp {
             return;
         }
 
-        if (newUsername.length < 1) {
-            document.getElementById('change-username-error').textContent = '账号长度不能少于1个字符';
+        if (newUsername.length < 3) {
+            document.getElementById('change-username-error').textContent = '账号至少需要3个字符';
             return;
         }
 
@@ -2769,11 +2579,15 @@ class ChatApp {
                 const oldCount = (this.messages[friend.id] || []).length;
                 this.messages[friend.id] = result.messages;
                 const newCount = result.messages.length;
+                if (newCount > oldCount && this.isNotificationEnabled(friend.id, false)) {
+                    const newMsgs = result.messages.slice(oldCount);
+                    const hasNewFromOther = newMsgs.some(m => m.senderId !== this.currentUser.id);
+                    if (hasNewFromOther) {
+                        this.playNotificationSound('message');
+                        break;
+                    }
+                }
             }
-        }
-        
-        if (!this.messagesLoaded) {
-            this.messagesLoaded = true;
         }
 
         for (const group of this.groups) {
@@ -2785,6 +2599,14 @@ class ChatApp {
                 const oldCount = (this.groupMessages[group.id] || []).length;
                 this.groupMessages[group.id] = result.messages;
                 const newCount = result.messages.length;
+                if (newCount > oldCount && this.isNotificationEnabled(group.id, true)) {
+                    const newMsgs = result.messages.slice(oldCount);
+                    const hasNewFromOther = newMsgs.some(m => m.senderId !== this.currentUser.id);
+                    if (hasNewFromOther) {
+                        this.playNotificationSound('message');
+                        break;
+                    }
+                }
             }
         }
 
@@ -2886,11 +2708,6 @@ class ChatApp {
             container.innerHTML = '<div class="empty-chat"><p>开始聊天吧！</p></div>';
             delete this.messages[this.currentFriend.id];
         }
-        
-        if (this.currentFriend) {
-            this.markMessagesAsRead(this.currentFriend.id);
-        }
-        
         document.getElementById('chat-view').style.display = 'none';
         this.currentFriend = null;
         this.renderChatList();
@@ -2971,9 +2788,7 @@ class ChatApp {
         container.innerHTML = html;
 
         if (scrollToBottom) {
-            requestAnimationFrame(() => {
-                container.scrollTop = container.scrollHeight;
-            });
+            container.scrollTop = container.scrollHeight;
         }
     }
 
@@ -3307,8 +3122,8 @@ class ChatApp {
         }
     }
 
-    logout(force = false) {
-        if (force || confirm('确定要退出登录吗？')) {
+    logout() {
+        if (confirm('确定要退出登录吗？')) {
             this.stopPolling();
             this.stopPasswordVersionCheck();
             localStorage.removeItem('currentUser');
@@ -3350,50 +3165,6 @@ class ChatApp {
             document.getElementById('auth-screen').style.display = 'flex';
             this.showLogin();
         }
-    }
-
-    showNotificationSettingsModal() {
-        document.getElementById('global-message-notification-toggle').checked = this.globalMessageNotification;
-        document.getElementById('global-call-notification-toggle').checked = this.globalCallNotification;
-        document.getElementById('floating-notification-toggle').checked = this.floatingNotification;
-        document.getElementById('lockscreen-notification-toggle').checked = this.lockscreenNotification;
-        document.getElementById('notification-settings-modal').style.display = 'flex';
-    }
-
-    closeNotificationSettingsModal() {
-        document.getElementById('notification-settings-modal').style.display = 'none';
-    }
-
-    updateServiceWorkerNotificationSettings() {
-        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-            navigator.serviceWorker.controller.postMessage({
-                type: 'UPDATE_NOTIFICATION_SETTINGS',
-                settings: {
-                    floatingNotification: this.floatingNotification,
-                    lockscreenNotification: this.lockscreenNotification
-                }
-            });
-        }
-    }
-
-    toggleGlobalMessageNotification(enabled) {
-        this.globalMessageNotification = enabled;
-        this.saveNotificationSettings();
-    }
-
-    toggleGlobalCallNotification(enabled) {
-        this.globalCallNotification = enabled;
-        this.saveNotificationSettings();
-    }
-
-    toggleFloatingNotification(enabled) {
-        this.floatingNotification = enabled;
-        this.saveNotificationSettings();
-    }
-
-    toggleLockscreenNotification(enabled) {
-        this.lockscreenNotification = enabled;
-        this.saveNotificationSettings();
     }
 
     shareApp() {
@@ -3593,7 +3364,7 @@ class ChatApp {
         document.getElementById('login-tab').textContent = t.login;
         document.getElementById('register-tab').textContent = t.register;
 
-        document.querySelector('#register-form input[type="text"]').placeholder = '账号（支持中文/英文/符号，至少2字符）';
+        document.querySelector('#register-form input[type="text"]').placeholder = '账号(中文/英文/符号,至少2字符)';
         document.querySelectorAll('#register-form input[type="password"]')[0].placeholder = t.password;
         document.querySelectorAll('#register-form input[type="password"]')[1].placeholder = t.password;
         document.getElementById('register-form-submit-btn').textContent = t.register;
@@ -3677,17 +3448,12 @@ class ChatApp {
             emptyChat.textContent = t.startChat;
         }
 
+        // 页脚
+        document.querySelector('.footer-info p:first-child').textContent = 'Tell ' + APP_VERSION;
+        document.querySelector('.copyright').textContent = t.copyright;
+
         // 版本信息
-        const version = typeof VERSION !== 'undefined' ? VERSION.full() : 'unknown';
-        const fullVersion = typeof VERSION !== 'undefined' ? VERSION.fullWithBuild() : 'unknown';
-        
-        document.getElementById('login-version').textContent = version;
-        document.getElementById('footer-version-number').textContent = version;
-        
-        const deployMeta = document.querySelector('meta[name="deploy-trigger"]');
-        if (deployMeta) {
-            deployMeta.content = fullVersion;
-        }
+        document.querySelector('.version-info span:first-child').textContent = APP_VERSION;
 
         // 聊天输入框
         document.getElementById('message-input').placeholder = this.currentLang === 'zh' ? '输入消息...' : 'Type a message...';
