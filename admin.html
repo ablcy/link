@@ -7,6 +7,15 @@
     <link rel="icon" href="logo.png" type="image/png">
     <link rel="stylesheet" href="admin.css">
     <script src="version.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const version = typeof VERSION !== 'undefined' ? VERSION.full() : 'unknown';
+            const loginVersion = document.getElementById('admin-login-version');
+            if (loginVersion) {
+                loginVersion.textContent = version;
+            }
+        });
+    </script>
 </head>
 <body>
     <div id="password-screen" class="password-screen">
@@ -160,6 +169,7 @@
                     <button id="toggle-changelog-btn" class="btn btn-secondary">▼ 展开</button>
                 </div>
                 <div class="changelog-content" id="changelog-content" style="display: none;">
+                    <div class="update-item">✨ v5.9.52 202605191200: 修复版本号显示为 unknown 的问题，在登录界面和管理员登录界面添加 DOMContentLoaded 事件监听器，确保版本号在页面加载完成后正确显示</div>
                     <div class="update-item">✨ v5.9.51 202605191100: 移除所有硬编码版本号，统一从 version.js 动态读取；改进 Service Worker 缓存清理策略，修复刷新时版本号跳跃问题；版本号显示更稳定、更一致</div>
                     <div class="update-item">✨ v5.9.50 202605181931: 修复好友添加通知头像显示错误问题，确保用户B添加用户A时，用户A正确显示用户B的头像和账号</div>
                     <div class="update-item">✨ v5.9.49 202605172330: 修复添加好友后消息无法实时收到问题，添加Socket.IO实时通知</div>
