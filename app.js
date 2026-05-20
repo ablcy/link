@@ -53,6 +53,9 @@ class ChatApp {
         this.burnAfterReadingFriendId = null;
         this.burnAfterReadingGroupId = null;
         
+        // 消息加载标志位，用于区分首次加载和后续更新
+        this.messagesLoaded = false;
+        
         // WebRTC相关
         this.socket = null;
         this.peerConnection = null;
@@ -2577,7 +2580,7 @@ class ChatApp {
                 const oldCount = (this.messages[friend.id] || []).length;
                 this.messages[friend.id] = result.messages;
                 const newCount = result.messages.length;
-                if (newCount > oldCount && this.isNotificationEnabled(friend.id, false)) {
+                if (newCount > oldCount && this.isNotificationEnabled(friend.id, false) && this.messagesLoaded) {
                     const newMsgs = result.messages.slice(oldCount);
                     const hasNewFromOther = newMsgs.some(m => m.senderId !== this.currentUser.id);
                     if (hasNewFromOther) {
@@ -2597,7 +2600,7 @@ class ChatApp {
                 const oldCount = (this.groupMessages[group.id] || []).length;
                 this.groupMessages[group.id] = result.messages;
                 const newCount = result.messages.length;
-                if (newCount > oldCount && this.isNotificationEnabled(group.id, true)) {
+                if (newCount > oldCount && this.isNotificationEnabled(group.id, true) && this.messagesLoaded) {
                     const newMsgs = result.messages.slice(oldCount);
                     const hasNewFromOther = newMsgs.some(m => m.senderId !== this.currentUser.id);
                     if (hasNewFromOther) {
@@ -2662,6 +2665,7 @@ class ChatApp {
         }
 
         await Promise.all(loadPromises);
+        this.messagesLoaded = true;
         this.renderChatList();
     }
 
