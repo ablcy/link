@@ -88,6 +88,11 @@ class ChatApp {
     }
 
     isNotificationEnabled(userId, isGroup = false) {
+        // 检查全局消息通知开关
+        if (this.notificationSettings.globalMessage === false) {
+            return false;
+        }
+        
         const key = isGroup ? `group_${userId}` : `friend_${userId}`;
         if (this.notificationSettings[key] !== undefined) {
             return this.notificationSettings[key];
@@ -568,7 +573,8 @@ class ChatApp {
 
         this.isInCall = true;
 
-        if (this.isNotificationEnabled(data.from, false)) {
+        // 检查全局视频通话通知开关
+        if (this.notificationSettings.globalCall !== false && this.isNotificationEnabled(data.from, false)) {
             this.playNotificationSound('call');
         }
 
@@ -1637,6 +1643,12 @@ class ChatApp {
 
         // 语言切换
         document.getElementById('lang-toggle').addEventListener('change', (e) => this.toggleLanguage(e.target.checked));
+
+        // 通知设置
+        document.getElementById('notification-settings-btn').addEventListener('click', () => this.showNotificationSettingsModal());
+        document.getElementById('close-notification-modal-btn').addEventListener('click', () => this.closeNotificationSettingsModal());
+        document.getElementById('global-message-notification-toggle').addEventListener('change', (e) => this.setGlobalMessageNotification(e.target.checked));
+        document.getElementById('global-call-notification-toggle').addEventListener('change', (e) => this.setGlobalCallNotification(e.target.checked));
 
         // 联系人列表事件委托
         document.getElementById('contacts-groups-section')?.addEventListener('click', (e) => {
@@ -3170,6 +3182,24 @@ class ChatApp {
         document.getElementById('auth-screen').classList.add('screen');
         document.getElementById('auth-screen').style.display = 'flex';
         this.showLogin();
+    }
+
+    showNotificationSettingsModal() {
+        document.getElementById('notification-settings-modal').style.display = 'flex';
+    }
+
+    closeNotificationSettingsModal() {
+        document.getElementById('notification-settings-modal').style.display = 'none';
+    }
+
+    setGlobalMessageNotification(enabled) {
+        this.notificationSettings.globalMessage = enabled;
+        this.saveNotificationSettings();
+    }
+
+    setGlobalCallNotification(enabled) {
+        this.notificationSettings.globalCall = enabled;
+        this.saveNotificationSettings();
     }
 
     shareApp() {
